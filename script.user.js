@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.0
+// @version      0.4.1
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -374,6 +374,35 @@
     }
 
 
+
+
+    // 获取A+页面图片 - 新增
+    function getAPlusImages() {
+        const images = [];
+
+        // A+模块图片
+        const aplusSelectors = [
+            '#aplus img',
+            '#aplus-media-container img',
+            '.apm-hovermodule img',
+            '.aplus-v2 img',
+            '#productDescription_feature_div img'
+        ];
+
+        for (const selector of aplusSelectors) {
+            const imgs = document.querySelectorAll(selector);
+            imgs.forEach(img => {
+                let url = img.getAttribute('data-src') || img.src || '';
+                // 获取高清版本
+                url = url.replace(/\._[A-Z]+\d+_\./, '.');
+                if (url && url.startsWith('http') && !images.includes(url)) {
+                    images.push(url);
+                }
+            });
+        }
+
+        return images;
+    }
 
     // 获取销售排名 - 支持大类目和小类目、卖家精灵等插件
     function getBSR() {
@@ -998,6 +1027,7 @@
         const ratings = getRating();
         const bsr = getBSR();
         const images = getImages();
+        const aplusImages = getAPlusImages();
         const reviews = getReviews();
 
         // 将评论列表格式化为文本
@@ -1026,6 +1056,7 @@
 
             // 图片
             图片: images,
+            A加图片: aplusImages,
 
             // 排名
             销售排名: bsr,
@@ -1137,6 +1168,7 @@
             { name: '副图6', type: 'text' },
             { name: '副图7', type: 'text' },
             { name: '副图8', type: 'text' },
+            { name: 'A+图片', type: 'text' },
             { name: '采集时间', type: 'date' }
         ];
 
@@ -1207,6 +1239,7 @@
             '副图6': data.图片.副图6,
             '副图7': data.图片.副图7,
             '副图8': data.图片.副图8,
+            'A+图片': (data.A加图片 || []).join('\n'),
             '采集时间': new Date().getTime()
         };
 
