@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.1
+// @version      0.4.2
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -564,12 +564,28 @@
         }
 
         // 按排名数字大小排序，大的是大类目，小的是小类目
-        const bsrList = allMatches.map(m => ({
-            排名: parseInt((m.排名Text || '').replace(/[,.\s\u00a0\u202f]/g, '')),
-            类目: (m.类目Text || '').replace(/\s*(Visualizza i Top \d+|See Top \d+|Voir le Top \d+|の売れ筋ランキングを見る|Ver el Top \d+|Voir les \d+ premiers)\s*/gi, '').trim()
-        })).filter(b => b.排名 > 0 && b.类目.length > 0);
+        const seen = new Set();
+        const bsrList = [];
 
-        // 按排名从大到小排序
+        allMatches.forEach(m => {
+            const rank = parseInt((m.排名Text || '').replace(/[,.\s\u00a0\u202f]/g, ''));
+            // 清理类目名称，移除 "See Top 100" 等后缀
+            let cat = (m.类目Text || '').replace(/\s*(Visualizza i Top \d+|See Top \d+|Voir le Top \d+|の売れ筋ランキングを見る|Ver el Top \d+|Voir les \d+ premiers|in\s+.*)\s*/gi, '').trim();
+            // 移除可能的前缀 (in, dans, etc if regex captured it included)
+            cat = cat.replace(/^.*\s+(in|nella categoria|dans|en)\s+/i, '');
+
+            if (rank > 0 && cat.length > 0) {
+                // 生成唯一键：排名+类目 (忽略大小写)
+                const key = `${rank}-${cat.toLowerCase()}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    bsrList.push({ 排名: rank, 类目: cat });
+                }
+            }
+        });
+
+        // 按排名从大到小排序 (数值越大，排名越靠后，通常是大类目)
+        // 注意：排名 #1 (数值1) 是最好的。通常大类目排名数值(#10000)比小类目(#50)大。
         bsrList.sort((a, b) => b.排名 - a.排名);
 
         if (bsrList.length > 0) {
@@ -579,11 +595,19 @@
             // 查找对应的URL
             result.类目链接 = findBsrLink(bsrList[0].类目, linkMap);
 
-            // 如果有第二个，是小类目
+            // 如果有第二个，且排名不同（或者类目完全不同），则是小类目
+            // 再次防止重复
             if (bsrList.length > 1) {
-                result.小类目排名 = bsrList[1].排名;
-                result.小类目 = bsrList[1].类目;
-                result.小类目链接 = findBsrLink(bsrList[1].类目, linkMap);
+                // 找到第一个类目名不包含"Best Sellers Rank"且不完全相同的小类目
+                for (let i = 1; i < bsrList.length; i++) {
+                    const sub = bsrList[i];
+                    if (sub.类目 !== result.类目) {
+                        result.小类目排名 = sub.排名;
+                        result.小类目 = sub.类目;
+                        result.小类目链接 = findBsrLink(sub.类目, linkMap);
+                        break;
+                    }
+                }
             }
         }
 
