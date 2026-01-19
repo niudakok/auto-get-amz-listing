@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.2
+// @version      0.4.3
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -547,7 +547,9 @@
             // 格式4: Nr. 前缀 (德语)
             /Nr\.\s*([\d,.]+)\s+(?:in|en)\s+([^\n\(]+)/gi,
             // 格式5: 日语 - 类目名 - 数字位
-            /([^\n\-]+?)\s*-\s*([\d,]+)位/g
+            /([^\n\-]+?)\s*-\s*([\d,]+)位/g,
+            // 格式6: 无前缀纯数字 (常见于小类目/其他变体) -> 123 in Category
+            /(?:^|[\n])\s*(?<!\d\s)(?<!\d)([\d\s\u00a0\u202f,.]+)\s+(?:in|nella categoria|dans|en)\s+([^\n\(#]+)/gi
         ];
 
         let allMatches = [];
