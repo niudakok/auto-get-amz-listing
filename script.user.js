@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.3.9
+// @version      0.4.0
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -184,88 +184,7 @@
         return '';
     }
 
-    // 获取价格信息 - 修复：正确解析欧洲格式价格
-    function getPrice() {
-        const result = {
-            当前价格: 0,
-            货币: 'EUR',
-            原价: null,
-            价格范围: null
-        };
 
-        // 获取货币符号
-        const market = getMarketCode();
-        const currencyMap = {
-            'US': 'USD', 'UK': 'GBP', 'DE': 'EUR', 'FR': 'EUR',
-            'IT': 'EUR', 'ES': 'EUR', 'JP': 'JPY', 'CA': 'CAD', 'AU': 'AUD'
-        };
-        result.货币 = currencyMap[market] || 'USD';
-
-        // 价格提取 - 多种选择器
-        const priceSelectors = [
-            '.a-price .a-offscreen',
-            '#priceblock_ourprice',
-            '#priceblock_dealprice',
-            '#corePrice_feature_div .a-offscreen',
-            '.priceToPay .a-offscreen',
-            '#apex_offerDisplay_desktop .a-offscreen'
-        ];
-
-        for (const selector of priceSelectors) {
-            const el = document.querySelector(selector);
-            if (el) {
-                const priceText = el.innerText || el.textContent || '';
-                const price = parsePrice(priceText);
-                if (price > 0) {
-                    result.当前价格 = price;
-                    break;
-                }
-            }
-        }
-
-        // 原价
-        const originalPriceSelectors = [
-            '.a-text-price .a-offscreen',
-            '.priceBlockStrikePriceString',
-            '#listPrice'
-        ];
-        for (const selector of originalPriceSelectors) {
-            const el = document.querySelector(selector);
-            if (el) {
-                const price = parsePrice(el.innerText || el.textContent || '');
-                if (price > 0) {
-                    result.原价 = price;
-                    break;
-                }
-            }
-        }
-
-        return result;
-    }
-
-    // 解析价格字符串 - 支持各种格式
-    function parsePrice(priceText) {
-        if (!priceText) return 0;
-
-        // 移除货币符号和空格
-        let cleaned = priceText.replace(/[€$£¥₹\s]/g, '').trim();
-
-        // 处理欧洲格式: 62,99 -> 62.99 或 1.234,56 -> 1234.56
-        // 检测欧洲格式: 逗号作为小数点
-        if (/^\d{1,3}(\.\d{3})*,\d{2}$/.test(cleaned)) {
-            // 1.234,56 格式
-            cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-        } else if (/^\d+,\d{2}$/.test(cleaned)) {
-            // 62,99 格式
-            cleaned = cleaned.replace(',', '.');
-        } else if (/^\d{1,3}(,\d{3})*\.\d{2}$/.test(cleaned)) {
-            // 1,234.56 美式格式
-            cleaned = cleaned.replace(/,/g, '');
-        }
-
-        const price = parseFloat(cleaned);
-        return isNaN(price) ? 0 : price;
-    }
 
 
     // 获取五点描述 - 使用精确选择器，支持最多6条
@@ -377,38 +296,6 @@
     }
 
 
-    // 获取当前变体信息
-    function getCurrentVariant() {
-        const result = {
-            变体ASIN: getASIN(),
-            变体类型: '',
-            变体值: '',
-            价格: null,
-            主图: ''
-        };
-
-        // 获取选中的变体
-        const selectedVariants = document.querySelectorAll('.a-button-selected .a-button-text, .swatchSelect, .imgSwatch.selected');
-        selectedVariants.forEach(el => {
-            const text = el.innerText?.trim() || el.getAttribute('title') || '';
-            if (text && text.length < 50) {
-                result.变体值 = text;
-            }
-        });
-
-        // 变体类型（从变体选择器的标签获取）
-        const variantLabels = document.querySelectorAll('.a-form-label, #variation_color_name .a-color-base, #variation_size_name .a-color-base');
-        for (const label of variantLabels) {
-            const text = label.innerText.replace(':', '').trim();
-            if (text && !text.includes('选择')) {
-                result.变体类型 = text;
-                break;
-            }
-        }
-
-        return result;
-    }
-
     // 获取图片信息 - 修复：正确获取所有图片URL
     function getImages() {
         const result = {
@@ -486,33 +373,7 @@
         return result;
     }
 
-    // 获取A+页面图片 - 新增
-    function getAPlusImages() {
-        const images = [];
 
-        // A+模块图片
-        const aplusSelectors = [
-            '#aplus img',
-            '#aplus-media-container img',
-            '.apm-hovermodule img',
-            '.aplus-v2 img',
-            '#productDescription_feature_div img'
-        ];
-
-        for (const selector of aplusSelectors) {
-            const imgs = document.querySelectorAll(selector);
-            imgs.forEach(img => {
-                let url = img.getAttribute('data-src') || img.src || '';
-                // 获取高清版本
-                url = url.replace(/\._[A-Z]+\d+_\./, '.');
-                if (url && url.startsWith('http') && !images.includes(url)) {
-                    images.push(url);
-                }
-            });
-        }
-
-        return images;
-    }
 
     // 获取销售排名 - 支持大类目和小类目、卖家精灵等插件
     function getBSR() {
@@ -1136,10 +997,7 @@
     function collectAllData() {
         const ratings = getRating();
         const bsr = getBSR();
-        const price = getPrice();
-        const variant = getCurrentVariant();
         const images = getImages();
-        const aplusImages = getAPlusImages();
         const reviews = getReviews();
 
         // 将评论列表格式化为文本
@@ -1166,15 +1024,8 @@
             五点描述: getBulletPoints(),
             产品描述: getDescription(),
 
-            // 价格
-            价格信息: price,
-
-            // 变体
-            当前变体: variant,
-
             // 图片
             图片: images,
-            A加图片: aplusImages,
 
             // 排名
             销售排名: bsr,
