@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.14
+// @version      0.4.15
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
@@ -157,8 +157,9 @@
 
     // 获取商品标题
     function getTitle() {
-        const el = document.getElementById('productTitle');
-        return el ? el.innerText.trim() : '';
+        const title = document.getElementById('productTitle')?.innerText.trim() || '';
+        const subtitle = document.getElementById('productSubtitle')?.innerText.trim() || '';
+        return [title, subtitle].filter((part, index) => part && (index === 0 || part !== title)).join(' ');
     }
 
     // 获取品牌 - 使用精确选择器
