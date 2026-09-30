@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.11
+// @version      0.4.12
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
@@ -20,6 +20,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @grant        GM_download
+// @grant        GM_info
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @connect      open.feishu.cn
 // @connect      *
@@ -27,6 +28,8 @@
 
 (function () {
     'use strict';
+
+    const SCRIPT_VERSION = typeof GM_info !== 'undefined' ? GM_info.script?.version || '未知版本' : '未知版本';
 
     // ==================== 判断是否为商品页 ====================
 
@@ -1727,6 +1730,7 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span id="popup-title" style="font-size: 20px;">🛒</span>
                     <span id="popup-title-text" style="font-weight: bold; color: #333;">竞品采集</span>
+                    <span style="font-size: 11px; color: #888; padding: 2px 6px; background: #f5f5f5; border-radius: 8px;">v${SCRIPT_VERSION}</span>
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <button id="btn-submit-top" style="background: #ff9900; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">📤 提交</button>
