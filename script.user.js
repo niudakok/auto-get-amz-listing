@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.7
+// @version      0.4.8
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -1855,10 +1855,20 @@
         };
 
         if (config.方案 === 'feishu') {
+            const cacheKey = `feishuLocalSkuCache:${config.飞书.appToken}:${config.飞书.tableId}`;
+            const cachedOptions = GM_getValue(cacheKey, []);
+            const hasCache = Array.isArray(cachedOptions) && cachedOptions.length > 0;
+            setLocalSkuOptions(cachedOptions, hasCache ? '本地缓存（正在后台更新…）' : '正在从飞书加载本地SKU…');
+
             getFeishuLocalSkuOptions(config).then(options => {
+                GM_setValue(cacheKey, options);
                 setLocalSkuOptions(options, options.length ? '请选择本地SKU（可选）' : '飞书表格中暂无本地SKU');
             }).catch(error => {
-                setLocalSkuOptions([], `加载失败：${error.message}`);
+                if (hasCache) {
+                    setLocalSkuOptions(cachedOptions, `使用本地缓存（飞书刷新失败：${error.message}）`);
+                } else {
+                    setLocalSkuOptions([], `加载失败：${error.message}`);
+                }
             });
         } else {
             setLocalSkuOptions([], '请切换到飞书方案加载SKU选项');
