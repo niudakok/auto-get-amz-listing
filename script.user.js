@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.5
+// @version      0.4.6
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -1141,6 +1141,50 @@
         });
     }
 
+    // 获取表格中已有的本地SKU，作为采集弹窗的单选项
+    async function getFeishuLocalSkuOptions(config) {
+        const { appId, appSecret, appToken, tableId } = config.飞书;
+        if (!appId || !appSecret || !appToken || !tableId) {
+            throw new Error('请先配置飞书应用和多维表格');
+        }
+
+        const token = await getFeishuToken(appId, appSecret);
+        const options = new Set();
+        let pageToken = '';
+
+        do {
+            const params = new URLSearchParams({
+                page_size: '500',
+                field_names: JSON.stringify(['本地SKU'])
+            });
+            if (pageToken) params.set('page_token', pageToken);
+
+            const page = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records?${params}`,
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    onload: function (response) {
+                        try {
+                            const result = JSON.parse(response.responseText);
+                            if (result.code === 0) resolve(result.data);
+                            else reject(new Error(result.msg || '读取本地SKU失败'));
+                        } catch (e) { reject(e); }
+                    },
+                    onerror: reject
+                });
+            });
+
+            (page.items || []).forEach(record => {
+                const value = record.fields?.['本地SKU'];
+                if (typeof value === 'string' && value.trim()) options.add(value.trim());
+            });
+            pageToken = page.page_token || '';
+        } while (pageToken);
+
+        return [...options].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    }
+
     // 创建飞书表格字段
     async function createFeishuField(token, appToken, tableId, fieldName, fieldType) {
         const typeMap = {
@@ -1633,8 +1677,9 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
                     <label style="font-size: 12px; font-weight: bold; color: #d46b08; white-space: nowrap;">本地SKU:</label>
-                    <input type="text" id="edit-localsku" value="${GM_getValue('lastLocalSkuField', '')}" placeholder="输入本地SKU（可选）"
-                        style="flex: 1; padding: 8px; border: 2px solid #ffd591; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                    <select id="edit-localsku" style="flex: 1; padding: 8px; border: 2px solid #ffd591; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                        <option value="" selected>正在从飞书加载...</option>
+                    </select>
                 </div>
             </div>
             
@@ -1723,6 +1768,35 @@
             `;
 
         document.body.appendChild(popup);
+
+        const localSkuSelect = document.getElementById('edit-localsku');
+        const setLocalSkuOptions = (options, message) => {
+            localSkuSelect.replaceChildren();
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = message;
+            localSkuSelect.appendChild(placeholder);
+
+            options.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                localSkuSelect.appendChild(option);
+            });
+
+            const savedSku = GM_getValue('lastLocalSkuField', '');
+            if (options.includes(savedSku)) localSkuSelect.value = savedSku;
+        };
+
+        if (config.方案 === 'feishu') {
+            getFeishuLocalSkuOptions(config).then(options => {
+                setLocalSkuOptions(options, options.length ? '请选择本地SKU（可选）' : '飞书表格中暂无本地SKU');
+            }).catch(error => {
+                setLocalSkuOptions([], `加载失败：${error.message}`);
+            });
+        } else {
+            setLocalSkuOptions([], '请切换到飞书方案加载SKU选项');
+        }
 
         // 折叠按钮事件
         let isCollapsed = false;
