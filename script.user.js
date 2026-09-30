@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.6
+// @version      0.4.7
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -1141,6 +1141,63 @@
         });
     }
 
+    // 下载 Amazon 主图并上传为飞书多维表格图片素材
+    async function uploadFeishuMainImage(token, appToken, imageUrl, asin) {
+        if (!imageUrl) throw new Error('未获取到商品主图，无法上传到飞书');
+
+        const image = await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: imageUrl,
+                responseType: 'blob',
+                timeout: 30000,
+                onload: response => {
+                    if (response.status < 200 || response.status >= 300 || !response.response?.size) {
+                        reject(new Error(`下载商品主图失败（HTTP ${response.status || '未知'}）`));
+                    } else if (response.response.size > 20 * 1024 * 1024) {
+                        reject(new Error('商品主图超过飞书单次上传的20MB限制'));
+                    } else {
+                        resolve(response.response);
+                    }
+                },
+                onerror: () => reject(new Error('下载商品主图失败，请检查网络或图片地址')),
+                ontimeout: () => reject(new Error('下载商品主图超时'))
+            });
+        });
+
+        const extension = image.type === 'image/png' ? 'png' : image.type === 'image/webp' ? 'webp' : 'jpg';
+        const form = new FormData();
+        form.append('file_name', `${asin || 'amazon-product'}_main.${extension}`);
+        form.append('parent_type', 'bitable_image');
+        form.append('parent_node', appToken);
+        form.append('size', String(image.size));
+        form.append('file', image, `${asin || 'amazon-product'}_main.${extension}`);
+
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: 'https://open.feishu.cn/open-apis/drive/v1/medias/upload_all',
+                headers: { 'Authorization': `Bearer ${token}` },
+                data: form,
+                timeout: 60000,
+                onload: response => {
+                    try {
+                        const result = JSON.parse(response.responseText);
+                        if (response.status >= 200 && response.status < 300 && result.code === 0 && result.data?.file_token) {
+                            resolve(result.data.file_token);
+                        } else {
+                            reject(new Error(result.msg || `飞书主图上传失败（HTTP ${response.status || '未知'}）`));
+                        }
+                    } catch (error) {
+                        reject(error instanceof SyntaxError ? new Error('飞书主图上传失败：无法解析响应') : error);
+                    }
+                },
+                onerror: () => reject(new Error('连接飞书主图上传接口失败')),
+                ontimeout: () => reject(new Error('上传商品主图到飞书超时'))
+            });
+        });
+    }
+
     // 获取表格中已有的本地SKU，作为采集弹窗的单选项
     async function getFeishuLocalSkuOptions(config) {
         const { appId, appSecret, appToken, tableId } = config.飞书;
@@ -1188,7 +1245,7 @@
     // 创建飞书表格字段
     async function createFeishuField(token, appToken, tableId, fieldName, fieldType) {
         const typeMap = {
-            'text': 1, 'number': 2, 'select': 3, 'date': 5, 'url': 15
+            'text': 1, 'number': 2, 'select': 3, 'date': 5, 'url': 15, 'attachment': 17
         };
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -1231,7 +1288,7 @@
             { name: 'BSR小类目', type: 'url' },
             { name: '上架日期', type: 'text' },
             { name: '评论内容', type: 'text' },
-            { name: '主图片', type: 'text' },
+            { name: '主图片', type: 'attachment' },
             { name: '副图1', type: 'text' },
             { name: '副图2', type: 'text' },
             { name: '副图3', type: 'text' },
@@ -1251,7 +1308,9 @@
         for (const field of requiredFields) {
             if (!existingNames.has(field.name)) {
                 try {
-                    await createFeishuField(token, appToken, tableId, field.name, field.type);
+                    const created = await createFeishuField(token, appToken, tableId, field.name, field.type);
+                    existingFields.push(created);
+                    existingNames.add(field.name);
                     createdFields.push(field.name);
                     console.log(`创建字段: ${field.name}`);
                 } catch (e) {
@@ -1259,7 +1318,7 @@
                 }
             }
         }
-        return createdFields;
+        return { createdFields, fields: existingFields };
     }
 
     // 写入飞书多维表格
@@ -1268,10 +1327,17 @@
 
         // 检测并创建缺失字段
         if (statusCallback) statusCallback('检测表格字段...');
-        const createdFields = await ensureFeishuFields(token, config.飞书.appToken, config.飞书.tableId);
+        const { createdFields, fields: tableFields } = await ensureFeishuFields(token, config.飞书.appToken, config.飞书.tableId);
         if (createdFields.length > 0) {
             console.log(`已创建 ${createdFields.length} 个新字段`);
         }
+
+        const mainImageField = tableFields.find(field => field.field_name === '主图片');
+        if (Number(mainImageField?.type) !== 17) {
+            throw new Error('飞书“主图片”字段不是附件类型，请将该字段改为附件后重试');
+        }
+        if (statusCallback) statusCallback('正在上传主图到飞书...');
+        const mainImageToken = await uploadFeishuMainImage(token, config.飞书.appToken, data.图片.主图, data.ASIN);
 
         if (statusCallback) statusCallback('正在写入数据...');
 
@@ -1303,7 +1369,7 @@
             } : null,
             '上架日期': data.上架日期 || '',
             '评论内容': data.评论汇总 || '',
-            '主图片': data.图片.主图,
+            '主图片': [{ file_token: mainImageToken }],
             '副图1': data.图片.副图1,
             '副图2': data.图片.副图2,
             '副图3': data.图片.副图3,
