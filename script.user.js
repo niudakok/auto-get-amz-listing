@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.8
+// @version      0.4.9
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -1521,6 +1521,9 @@
             <!-- 本地API配置区 -->
             <div id="localapi-config" style="display: ${config.方案 === 'localapi' ? 'block' : 'none'}; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px;">
                 <h3 style="margin: 0 0 15px; font-size: 16px; color: #52c41a;">🖥️ 本地API配置</h3>
+                <div style="margin-bottom: 12px; padding: 10px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px; color: #555; line-height: 1.6;">
+                    用于把采集结果发送到你自己运行的本地服务。提交时脚本会向“API地址 + API端点”发送 JSON；服务需返回 <code>{"success":true}</code> 或 <code>{"成功":true}</code>。本脚本不包含本地服务端；只同步到飞书时请选择“飞书多维表格”。“测试连接”会请求 API 地址下的 <code>/health</code>。
+                </div>
                 
                 <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 4px; font-size: 13px;">API地址:</label>
@@ -1725,12 +1728,13 @@
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <button id="btn-submit-top" style="background: #ff9900; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">📤 提交</button>
-                    <button id="btn-capture-aplus" style="background: #13c2c2; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">📸</button>
+                    <button id="btn-capture-aplus" title="截取页面中的 A+ 内容" aria-label="A+截图" style="background: #13c2c2; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">A+ 📸</button>
                     <button id="popup-settings" style="background: #595959; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">⚙️</button>
                     <span style="background: #${config.方案 === 'feishu' ? '1890ff' : '52c41a'}; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 11px;">
                         ${config.方案 === 'feishu' ? '飞书' : 'API'}
                     </span>
                     <button id="btn-toggle-collapse" style="background: #722ed1; color: #fff; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;">▼</button>
+                    <button id="popup-close-top" title="关闭采集窗口" aria-label="关闭采集窗口" style="background: #f5f5f5; color: #666; border: 1px solid #ddd; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1;">×</button>
                 </div>
             </div>
             
@@ -1910,6 +1914,9 @@
         });
 
         document.getElementById('popup-close').addEventListener('click', () => {
+            document.body.removeChild(popup);
+        });
+        document.getElementById('popup-close-top').addEventListener('click', () => {
             document.body.removeChild(popup);
         });
 
