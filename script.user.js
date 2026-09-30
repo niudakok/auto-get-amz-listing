@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.15
+// @version      0.4.16
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
@@ -157,9 +157,12 @@
 
     // 获取商品标题
     function getTitle() {
-        const title = document.getElementById('productTitle')?.innerText.trim() || '';
-        const subtitle = document.getElementById('productSubtitle')?.innerText.trim() || '';
-        return [title, subtitle].filter((part, index) => part && (index === 0 || part !== title)).join(' ');
+        return document.getElementById('productTitle')?.innerText.trim() || '';
+    }
+
+    // 获取商品副标题
+    function getTitleDifferentiation() {
+        return document.getElementById('productSubtitle')?.innerText.trim() || '';
     }
 
     // 获取品牌 - 使用精确选择器
@@ -1100,6 +1103,7 @@
 
             // 核心内容
             标题: getTitle(),
+            title_differentiation: getTitleDifferentiation(),
             品牌: getBrand(),
             五点描述: getBulletPoints(),
             产品描述: getDescription(),
@@ -1297,6 +1301,7 @@
             { name: '站点', type: 'text' },
             { name: '链接', type: 'url' },
             { name: '标题', type: 'text' },
+            { name: 'title_differentiation', type: 'text' },
             { name: '品牌', type: 'text' },
             { name: '五点1', type: 'text' },
             { name: '五点2', type: 'text' },
@@ -1372,6 +1377,7 @@
             '站点': data.站点,
             '链接': { link: data.链接, text: data.ASIN },
             '标题': data.标题,
+            'title_differentiation': data.title_differentiation,
             '品牌': data.品牌,
             '五点1': data.五点描述[0] || '',
             '五点2': data.五点描述[1] || '',

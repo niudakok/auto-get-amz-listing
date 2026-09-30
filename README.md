@@ -1,4 +1,4 @@
-# 亚马逊竞品采集脚本 v0.4.15
+# 亚马逊竞品采集脚本 v0.4.16
 
 > 采集亚马逊商品页面信息并同步到飞书多维表格
 
@@ -90,6 +90,7 @@ https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user
 | ASIN | 文本 | 自动采集 |
 | 站点 | 文本 | US/UK/DE等 |
 | 标题 | 文本 | 商品标题 |
+| title_differentiation | 文本 | 商品副标题；提交时若字段不存在会自动创建 |
 | 品牌 | 文本 | 品牌名称 |
 | 五点1-6 | 文本 | 五点描述 |
 | 产品描述 | 文本 | 产品描述 |
@@ -105,6 +106,9 @@ https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user
 ---
 
 ## 📝 更新日志
+
+### v0.4.16 (2026-09-30)
+- **v0.4.16** - 将亚马逊副标题独立写入 `title_differentiation` 字段
 
 ### v0.4.15 (2026-09-30)
 - **v0.4.15** - 合并商品主标题与副标题后写入标题字段
