@@ -19,7 +19,13 @@
 2. 打开 [脚本安装地址](https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js)
 3. 在 Tampermonkey 安装页确认安装
 
-后续版本可通过 Tampermonkey 的“检查用户脚本的更新”获取，无需手动复制脚本。
+新安装的脚本已配置 GitHub 更新源。已有脚本若是通过手动复制安装，请在 Tampermonkey 的脚本设置中将“更新 URL”设为：
+
+```text
+https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
+```
+
+保存后，点击“检查用户脚本的更新”即可拉取新版本；以后可从 Tampermonkey 检查更新，无需手动复制脚本。
 
 ## 🚀 快速开始
 
