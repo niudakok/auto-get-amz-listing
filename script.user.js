@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.12
+// @version      0.4.13
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
@@ -170,6 +170,7 @@
             // 清理各种语言的前缀
             brand = brand.replace(/^(Visit the |Brand: |Store: |Visita lo Store di |Marque\s*:\s*|Marke\s*:\s*|Marca\s*:\s*|ブランド\s*:\s*)/i, '');
             brand = brand.replace(/\s+Store$/i, ''); // 移除结尾的 Store
+            brand = brand.replace(/のストアを(?:表示|見る)\s*$/, ''); // 移除日文店铺链接提示
             if (brand) return brand.trim();
         }
 
