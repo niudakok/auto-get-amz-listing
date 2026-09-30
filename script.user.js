@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.13
+// @version      0.4.14
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
@@ -971,12 +971,16 @@
         return dateStr;
     }
 
-    // 获取评论 - 修复：获取完整评论内容
+    // 获取标准评论及商品页顶部的新版本地/国际评论卡片
     function getReviews() {
         const reviews = [];
 
-        // 主要评论区
-        const reviewElements = document.querySelectorAll('[data-hook="review"], .review');
+        const reviewElements = new Set(document.querySelectorAll('[data-hook="review"], .review'));
+        document.querySelectorAll('#localTopReviews, #internationalTopReviews').forEach(container => {
+            container.querySelectorAll('[id^="R"]').forEach(el => {
+                if (/^R[A-Z0-9]{8,}$/.test(el.id)) reviewElements.add(el);
+            });
+        });
 
         reviewElements.forEach(el => {
             const review = {
@@ -1002,7 +1006,9 @@
                 '[data-hook="review-title"] span:not(.a-icon-alt)',
                 '.review-title span',
                 '.review-title-content',
-                'a[data-hook="review-title"]'
+                'a[data-hook="review-title"]',
+                'h3',
+                'h4'
             ];
             for (const selector of titleSelectors) {
                 const titleEl = el.querySelector(selector);
@@ -1016,7 +1022,9 @@
             const bodySelectors = [
                 '[data-hook="review-body"] span',
                 '.review-text-content span',
-                '.review-text span'
+                '.review-text span',
+                '[class*="reviewText"]',
+                'p'
             ];
             for (const selector of bodySelectors) {
                 const bodyEl = el.querySelector(selector);
@@ -1024,6 +1032,14 @@
                     review.内容 = bodyEl.innerText.trim();
                     break;
                 }
+            }
+
+            // 新版顶部评论卡片未必保留 review-body 标记，退回提取较长的正文行。
+            if (!review.内容 && el.closest('#localTopReviews, #internationalTopReviews')) {
+                review.内容 = el.innerText.split(/\n+/).map(line => line.trim()).filter(line =>
+                    line.length >= 20 &&
+                    !/星\dつ中|星\dつ|レビュー済み|Amazonで購入|色:|サイズ:|参考になった|レポートレビュー|レビューを日本語に翻訳|続きを読む|役に立った/.test(line)
+                ).join('\n');
             }
 
             // 日期
