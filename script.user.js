@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.4
+// @version      0.4.5
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
 // @match        *://*.amazon.com/*
@@ -1067,6 +1067,7 @@
         return {
             // 本地SKU - 手动填写
             本地SKU: '',
+            产品名称: '',
 
             // 基本标识
             ASIN: getASIN(),
@@ -1166,6 +1167,7 @@
     // 确保所有需要的字段存在
     async function ensureFeishuFields(token, appToken, tableId) {
         const requiredFields = [
+            { name: '产品名称', type: 'text' },
             { name: '本地SKU', type: 'text' },
             { name: 'ASIN', type: 'text' },
             { name: '站点', type: 'text' },
@@ -1185,7 +1187,7 @@
             { name: 'BSR小类目', type: 'url' },
             { name: '上架日期', type: 'text' },
             { name: '评论内容', type: 'text' },
-            { name: '主图', type: 'text' },
+            { name: '主图片', type: 'text' },
             { name: '副图1', type: 'text' },
             { name: '副图2', type: 'text' },
             { name: '副图3', type: 'text' },
@@ -1231,6 +1233,7 @@
 
         // 构建记录数据
         const fields = {
+            '产品名称': data.产品名称,
             '本地SKU': data.本地SKU,
             'ASIN': data.ASIN,
             '站点': data.站点,
@@ -1256,7 +1259,7 @@
             } : null,
             '上架日期': data.上架日期 || '',
             '评论内容': data.评论汇总 || '',
-            '主图': data.图片.主图,
+            '主图片': data.图片.主图,
             '副图1': data.图片.副图1,
             '副图2': data.图片.副图2,
             '副图3': data.图片.副图3,
@@ -1621,11 +1624,16 @@
                 </div>
             </div>
             
-            <!-- 本地SKU - 始终显示 -->
+            <!-- 产品名称与本地SKU - 始终显示 -->
             <div style="margin-bottom: 8px; padding: 8px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 4px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #d46b08; white-space: nowrap;">📦 SKU:</label>
-                    <input type="text" id="edit-localsku" value="${GM_getValue('lastLocalSku', '')}" placeholder="输入本地SKU"
+                    <label style="font-size: 12px; font-weight: bold; color: #d46b08; white-space: nowrap;">📦 产品名称:</label>
+                    <input type="text" id="edit-product-name" value="${GM_getValue('lastProductName', GM_getValue('lastLocalSku', ''))}" placeholder="输入产品名称"
+                        style="flex: 1; padding: 8px; border: 2px solid #ffd591; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #d46b08; white-space: nowrap;">本地SKU:</label>
+                    <input type="text" id="edit-localsku" value="${GM_getValue('lastLocalSkuField', '')}" placeholder="输入本地SKU（可选）"
                         style="flex: 1; padding: 8px; border: 2px solid #ffd591; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
                 </div>
             </div>
@@ -1760,11 +1768,12 @@
 
         const submitHandler = async () => {
             const localSku = document.getElementById('edit-localsku').value.trim();
+            const productName = document.getElementById('edit-product-name').value.trim();
 
-            // 验证本地SKU
-            if (!localSku) {
-                alert('请填写本地SKU！');
-                document.getElementById('edit-localsku').focus();
+            // 保持原 SKU 输入框必填的行为，其语义现为产品名称。
+            if (!productName) {
+                alert('请填写产品名称！');
+                document.getElementById('edit-product-name').focus();
                 return;
             }
 
@@ -1799,6 +1808,7 @@
 
             // 更新编辑后的数据
             data.本地SKU = localSku;
+            data.产品名称 = productName;
             data.标题 = document.getElementById('edit-title').value;
             data.品牌 = document.getElementById('edit-brand').value;
             data.五点描述 = document.getElementById('edit-bullets').value.split('\n').filter(s => s.trim());
@@ -1818,8 +1828,9 @@
 
                 updateStatus('#f6ffed', '1px solid #b7eb8f', '✅ <b>提交成功！</b> 数据已同步');
 
-                // 保存本地SKU以便下次使用
-                GM_setValue('lastLocalSku', localSku);
+                // 保存产品名称与本地SKU以便下次使用
+                GM_setValue('lastProductName', productName);
+                GM_setValue('lastLocalSkuField', localSku);
 
                 // 恢复按钮为"再次提交"
                 if (btnBottom) { btnBottom.disabled = false; btnBottom.textContent = '📤 再次提交'; }
