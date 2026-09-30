@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         亚马逊竞品采集
 // @namespace    http://tampermonkey.net/
-// @version      0.4.10
+// @version      0.4.11
 // @description  采集亚马逊商品页面信息并同步到飞书多维表格，支持配置页面、双方案选择、自动创建字段、A+截图
 // @author       niuda123
-// @updateURL    https://raw.githubusercontent.com/niudakok/auto-get-amz-listing/main/script.user.js
-// @downloadURL  https://raw.githubusercontent.com/niudakok/auto-get-amz-listing/main/script.user.js
+// @updateURL    https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
+// @downloadURL  https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.co.uk/*
 // @match        *://*.amazon.de/*

@@ -1,4 +1,4 @@
-# 亚马逊竞品采集脚本 v0.4.10
+# 亚马逊竞品采集脚本 v0.4.11
 
 > 采集亚马逊商品页面信息并同步到飞书多维表格
 
@@ -16,7 +16,7 @@
 ## 📦 安装方法
 
 1. 安装 [Tampermonkey](https://www.tampermonkey.net/) 浏览器扩展
-2. 打开 [脚本安装地址](https://raw.githubusercontent.com/niudakok/auto-get-amz-listing/main/script.user.js)
+2. 打开 [脚本安装地址](https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user.js)
 3. 在 Tampermonkey 安装页确认安装
 
 后续版本可通过 Tampermonkey 的“检查用户脚本的更新”获取，无需手动复制脚本。
@@ -99,6 +99,9 @@
 ---
 
 ## 📝 更新日志
+
+### v0.4.11 (2026-09-30)
+- **v0.4.11** - 更新地址改用 GitHub 分支 Raw URL，避开旧 Raw 缓存
 
 ### v0.4.10 (2026-09-30)
 - **v0.4.10** - 配置 GitHub Raw 更新与下载地址，支持 Tampermonkey 检查更新
