@@ -27,6 +27,8 @@ https://github.com/niudakok/auto-get-amz-listing/raw/refs/heads/main/script.user
 
 保存后，点击“检查用户脚本的更新”即可拉取新版本；以后可从 Tampermonkey 检查更新，无需手动复制脚本。
 
+> ⚠️ **刚发布新版本就检查更新，提示“已是最新版”？** 这是 GitHub Raw CDN 缓存导致的：新版本 push 后，CDN 节点会继续返回旧文件约 5 分钟，Tampermonkey 读到旧版本号便认为没有更新。**等 5~10 分钟后再点“检查更新”即可**，无需重装脚本。
+
 ## 🚀 快速开始
 
 1. 打开任意亚马逊商品页面
